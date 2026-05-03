@@ -1,6 +1,8 @@
 from pricing_model.option import Option
 from pricing_model.black_scholes import black_scholes
 from pricing_model.binomial_tree import binomial_tree
+from back_tester import back_tester
+from download_data import download_data
 
 underlying_price = 100  # Current price of the underlying asset
 strike_price = 100      # Strike price of the option
@@ -32,3 +34,11 @@ put = Option(underlying_price, strike_price, time_to_expiration, risk_free_rate,
 bt_put = binomial_tree(option=put, steps=100)
 print(f"[Binomial Tree]  put price (European): {bt_put.price():.4f}")
 print(f"[Binomial Tree]  put price (American): {bt_put.price(american=True):.4f}")
+
+# Backtest — fetch SPY data from Yahoo Finance and run
+data = download_data("sndk","2018-01-01", "2027-01-01")
+data = data.set_index("Date")
+bt_test = back_tester(data, option_type='call', strike_pct=1.0, time_to_expiration=1/12)
+bt_test.run()
+bt_test.summary()
+bt_test.plot()

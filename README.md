@@ -15,6 +15,10 @@ A Python library for pricing financial options using analytical and numerical mo
 Option_Pricer/
 ├── src/
 │   ├── main.py                        # Example usage
+│   ├── back_tester.py                 # Backtesting engine
+│   ├── tests/
+│   │   ├── test_black_scholes.py
+│   │   └── test_binomial_tree.py
 │   └── pricing_model/
 │       ├── __init__.py                # Package exports
 │       ├── option.py                  # Option dataclass
@@ -78,6 +82,74 @@ Run the example:
 cd src
 python main.py
 ```
+
+### Backtester
+
+Tests how well the pricing models predict actual option payoffs on historical data.
+For each date, it prices a fresh option using rolling historical volatility, then
+looks forward to the expiration date to record what the option actually paid out.
+
+```python
+from back_tester import back_tester
+
+# Load historical price data (CSV with Date and Close columns)
+data = back_tester.load_csv('data/SPY.csv')
+
+bt = back_tester(
+    data=data,
+    option_type='call',
+    strike_pct=1.0,           # ATM (strike = spot at pricing date)
+    time_to_expiration=1/12,  # 1-month options
+    risk_free_rate=0.05,
+    volatility_window=30,     # 30-day rolling historical vol
+    model='both',             # run Black-Scholes and Binomial Tree
+    bt_steps=100,
+)
+
+bt.run()
+bt.summary()
+bt.plot()
+```
+
+**Example output:**
+
+```
+====================================================
+Backtest Summary
+  Option type  : call
+  Strike       : 100% of spot (at pricing date)
+  Expiration   : 21 trading days
+  Vol window   : 30 days
+  Period       : 2020-01-02 → 2024-12-31
+  Observations : 1208
+
+Actual payoff stats:
+  Mean payoff      : 3.2147
+  Expired worthless: 43.2%
+
+Black-Scholes:
+  MAE  : 1.8432
+  RMSE : 2.6701
+  Bias : 0.4123 (overpriced)
+
+Binomial Tree:
+  MAE  : 1.8519
+  RMSE : 2.6788
+  Bias : 0.4201 (overpriced)
+====================================================
+```
+
+**CSV format expected:**
+
+```
+Date,Open,High,Low,Close,Volume
+2020-01-02,324.66,325.88,322.53,324.87,73610900
+2020-01-03,321.16,323.64,320.16,322.01,82228100
+...
+```
+
+The backtester only requires `Date` and `Close` columns. You can download historical data
+from [Yahoo Finance](https://finance.yahoo.com) → search ticker → Historical Data → Download.
 
 ## Model Details
 
